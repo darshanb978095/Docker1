@@ -1,0 +1,38 @@
+name: Deploy Python Docker App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Connect to EC2 and Deploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            echo "Connected to EC2"
+
+            # Clone repo if not present
+            if [ ! -d Docker1 ]; then
+              git clone https://${{ secrets.GH_PAT }}@github.com/darshanb978095/Docker1.git
+            fi
+
+            cd Docker1
+            git pull https://${{ secrets.GH_PAT }}@github.com/darshanb978095/Docker1.git main
+
+            docker stop pythonapp || true
+            docker rm pythonapp || true
+
+            docker build -t pythonapp .
+            docker run -d -p 5000:5000 --name pythonapp pythonapp
